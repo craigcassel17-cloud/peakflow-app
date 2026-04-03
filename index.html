@@ -67,7 +67,7 @@ button.secondary {
 
 <div class="header">
   <h2 style="margin:0;">PeakFlow CRM</h2>
-  <div style="margin-top:4px;font-size:14px;">Customer records, quotes, and jobs</div>
+  <div style="margin-top:4px;font-size:14px;">Customer records, quotes, jobs, and payments</div>
 </div>
 
 <div class="container">
@@ -248,27 +248,97 @@ button.secondary {
     <div id="jobList"></div>
   </div>
 
+  <div class="grid-2">
+    <div class="card">
+      <h3 class="section-title">Add Payment</h3>
+
+      <label>Customer Name</label>
+      <input id="paymentCustomer" placeholder="John Smith">
+
+      <label>Service</label>
+      <input id="paymentService" placeholder="House Wash">
+
+      <label>Payment Amount</label>
+      <input id="paymentAmount" type="number" placeholder="325">
+
+      <label>Payment Method</label>
+      <select id="paymentMethod">
+        <option>Cash</option>
+        <option>Check</option>
+        <option>Credit Card</option>
+        <option>Debit Card</option>
+        <option>Square</option>
+        <option>Stripe</option>
+        <option>Other</option>
+      </select>
+
+      <label>Payment Date</label>
+      <input id="paymentDate" type="date">
+
+      <label>Payment Status</label>
+      <select id="paymentStatus">
+        <option>Pending</option>
+        <option>Paid</option>
+        <option>Partial</option>
+        <option>Refunded</option>
+      </select>
+
+      <label>Payment Notes</label>
+      <textarea id="paymentNotes" placeholder="Deposit received, final balance due on completion"></textarea>
+
+      <button onclick="addPayment()">Save Payment</button>
+    </div>
+
+    <div class="card">
+      <h3 class="section-title">Payment Search</h3>
+      <input id="paymentSearch" placeholder="Search payments..." oninput="renderPayments()">
+
+      <label>Payment Status Filter</label>
+      <select id="paymentFilterStatus" onchange="renderPayments()">
+        <option value="All">All</option>
+        <option>Pending</option>
+        <option>Paid</option>
+        <option>Partial</option>
+        <option>Refunded</option>
+      </select>
+
+      <div style="margin-top:14px;">
+        <strong>Total Payments:</strong> <span id="paymentCount">0</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 class="section-title">Payments</h3>
+    <div id="paymentList"></div>
+  </div>
+
 </div>
 
 <script>
 let customers = JSON.parse(localStorage.getItem("peakflow_crm_customers") || "[]");
 let quotes = JSON.parse(localStorage.getItem("peakflow_crm_quotes") || "[]");
 let jobs = JSON.parse(localStorage.getItem("peakflow_crm_jobs") || "[]");
+let payments = JSON.parse(localStorage.getItem("peakflow_crm_payments") || "[]");
 
 if (!document.getElementById("dateAdded").value) {
   document.getElementById("dateAdded").value = new Date().toISOString().slice(0, 10);
+}
+if (!document.getElementById("paymentDate").value) {
+  document.getElementById("paymentDate").value = new Date().toISOString().slice(0, 10);
 }
 
 function saveCustomers() {
   localStorage.setItem("peakflow_crm_customers", JSON.stringify(customers));
 }
-
 function saveQuotes() {
   localStorage.setItem("peakflow_crm_quotes", JSON.stringify(quotes));
 }
-
 function saveJobs() {
   localStorage.setItem("peakflow_crm_jobs", JSON.stringify(jobs));
+}
+function savePayments() {
+  localStorage.setItem("peakflow_crm_payments", JSON.stringify(payments));
 }
 
 function addCustomer() {
@@ -373,25 +443,62 @@ function clearJobForm() {
   document.getElementById("jobNotes").value = "";
 }
 
+function addPayment() {
+  let payment = {
+    id: Date.now(),
+    customerName: document.getElementById("paymentCustomer").value.trim(),
+    service: document.getElementById("paymentService").value.trim(),
+    amount: document.getElementById("paymentAmount").value.trim(),
+    method: document.getElementById("paymentMethod").value,
+    date: document.getElementById("paymentDate").value,
+    status: document.getElementById("paymentStatus").value,
+    notes: document.getElementById("paymentNotes").value.trim()
+  };
+
+  if (!payment.customerName) {
+    alert("Enter customer name");
+    return;
+  }
+
+  payments.unshift(payment);
+  savePayments();
+  clearPaymentForm();
+  renderPayments();
+}
+
+function clearPaymentForm() {
+  document.getElementById("paymentCustomer").value = "";
+  document.getElementById("paymentService").value = "";
+  document.getElementById("paymentAmount").value = "";
+  document.getElementById("paymentMethod").value = "Cash";
+  document.getElementById("paymentDate").value = new Date().toISOString().slice(0, 10);
+  document.getElementById("paymentStatus").value = "Pending";
+  document.getElementById("paymentNotes").value = "";
+}
+
 function deleteCustomer(id) {
   if (!confirm("Delete this customer?")) return;
   customers = customers.filter(c => c.id !== id);
   saveCustomers();
   renderCustomers();
 }
-
 function deleteQuote(id) {
   if (!confirm("Delete this quote?")) return;
   quotes = quotes.filter(q => q.id !== id);
   saveQuotes();
   renderQuotes();
 }
-
 function deleteJob(id) {
   if (!confirm("Delete this job?")) return;
   jobs = jobs.filter(j => j.id !== id);
   saveJobs();
   renderJobs();
+}
+function deletePayment(id) {
+  if (!confirm("Delete this payment?")) return;
+  payments = payments.filter(p => p.id !== id);
+  savePayments();
+  renderPayments();
 }
 
 function advanceStatus(id) {
@@ -568,6 +675,57 @@ function renderJobs() {
   document.getElementById("jobList").innerHTML = html;
 }
 
+function renderPayments() {
+  const search = document.getElementById("paymentSearch").value.toLowerCase();
+  const filterStatus = document.getElementById("paymentFilterStatus").value;
+
+  let filtered = payments.filter(p => {
+    let haystack = [
+      p.customerName,
+      p.service,
+      p.amount,
+      p.method,
+      p.date,
+      p.status,
+      p.notes
+    ].join(" ").toLowerCase();
+
+    let matchesSearch = haystack.includes(search);
+    let matchesStatus = filterStatus === "All" || p.status === filterStatus;
+    return matchesSearch && matchesStatus;
+  });
+
+  document.getElementById("paymentCount").textContent = filtered.length;
+
+  let html = "";
+  filtered.forEach(p => {
+    html += `
+      <div class="record">
+        <div class="row">
+          <div>
+            <div><strong>${escapeHtml(p.customerName)}</strong></div>
+            ${statusBadge(escapeHtml(p.status))}
+            <div class="small"><strong>Service:</strong> ${escapeHtml(p.service || "")}</div>
+            <div class="small"><strong>Method:</strong> ${escapeHtml(p.method || "")}</div>
+            <div class="small"><strong>Date:</strong> ${escapeHtml(p.date || "")}</div>
+            <div class="small"><strong>Notes:</strong> ${escapeHtml(p.notes || "")}</div>
+          </div>
+          <div class="money">$${escapeHtml(p.amount || "0")}</div>
+        </div>
+        <div class="actions">
+          <button class="secondary" onclick="deletePayment(${p.id})">Delete</button>
+        </div>
+      </div>
+    `;
+  });
+
+  if (!html) {
+    html = "<div class='small'>No payments found.</div>";
+  }
+
+  document.getElementById("paymentList").innerHTML = html;
+}
+
 function escapeHtml(str) {
   return String(str)
     .replaceAll("&", "&amp;")
@@ -580,6 +738,7 @@ function escapeHtml(str) {
 renderCustomers();
 renderQuotes();
 renderJobs();
+renderPayments();
 </script>
 
 </body>
