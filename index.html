@@ -28,13 +28,14 @@ button {
   color:#fff;
   border:none;
   font-weight:bold;
+  cursor:pointer;
 }
 button.secondary {
   background:#fff;
   color:#111;
   border:1px solid #ccc;
 }
-.customer {
+.record {
   border:1px solid #ddd;
   border-radius:10px;
   padding:12px;
@@ -59,20 +60,21 @@ button.secondary {
 .money { font-size:20px; font-weight:bold; white-space:nowrap; }
 .actions { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
 .actions button { width:auto; padding:10px 12px; }
+.section-title { margin-top:0; }
 </style>
 </head>
 <body>
 
 <div class="header">
   <h2 style="margin:0;">PeakFlow CRM</h2>
-  <div style="margin-top:4px;font-size:14px;">Customer records for quotes, jobs, and payments</div>
+  <div style="margin-top:4px;font-size:14px;">Customer records, quotes, jobs, and payments</div>
 </div>
 
 <div class="container">
 
   <div class="grid-2">
     <div class="card">
-      <h3>Add Customer</h3>
+      <h3 class="section-title">Add Customer</h3>
 
       <label>Full Name</label>
       <input id="fullName" placeholder="John Smith">
@@ -114,11 +116,11 @@ button.secondary {
     </div>
 
     <div class="card">
-      <h3>Search</h3>
-      <input id="search" placeholder="Search name, phone, address, service..." oninput="render()">
+      <h3 class="section-title">Customer Search</h3>
+      <input id="search" placeholder="Search name, phone, address, service..." oninput="renderCustomers()">
 
       <label>Status Filter</label>
-      <select id="filterStatus" onchange="render()">
+      <select id="filterStatus" onchange="renderCustomers()">
         <option value="All">All</option>
         <option>New Lead</option>
         <option>Quoted</option>
@@ -134,21 +136,80 @@ button.secondary {
   </div>
 
   <div class="card">
-    <h3>Customers</h3>
-    <div id="list"></div>
+    <h3 class="section-title">Customers</h3>
+    <div id="customerList"></div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <h3 class="section-title">Add Quote</h3>
+
+      <label>Customer Name</label>
+      <input id="quoteCustomer" placeholder="John Smith">
+
+      <label>Service</label>
+      <input id="quoteService" placeholder="House Wash">
+
+      <label>Property Address</label>
+      <input id="quoteAddress" placeholder="123 Main St, Monroe, GA">
+
+      <label>Quote Price</label>
+      <input id="quotePrice" type="number" placeholder="325">
+
+      <label>Quote Status</label>
+      <select id="quoteStatus">
+        <option>Draft</option>
+        <option>Sent</option>
+        <option>Approved</option>
+        <option>Rejected</option>
+      </select>
+
+      <label>Quote Notes</label>
+      <textarea id="quoteNotes" placeholder="Includes driveway add-on"></textarea>
+
+      <button onclick="addQuote()">Save Quote</button>
+    </div>
+
+    <div class="card">
+      <h3 class="section-title">Quote Search</h3>
+      <input id="quoteSearch" placeholder="Search quotes..." oninput="renderQuotes()">
+
+      <label>Quote Status Filter</label>
+      <select id="quoteFilterStatus" onchange="renderQuotes()">
+        <option value="All">All</option>
+        <option>Draft</option>
+        <option>Sent</option>
+        <option>Approved</option>
+        <option>Rejected</option>
+      </select>
+
+      <div style="margin-top:14px;">
+        <strong>Total Quotes:</strong> <span id="quoteCount">0</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 class="section-title">Quotes</h3>
+    <div id="quoteList"></div>
   </div>
 
 </div>
 
 <script>
-let data = JSON.parse(localStorage.getItem("peakflow_crm_customers") || "[]");
+let customers = JSON.parse(localStorage.getItem("peakflow_crm_customers") || "[]");
+let quotes = JSON.parse(localStorage.getItem("peakflow_crm_quotes") || "[]");
 
 if (!document.getElementById("dateAdded").value) {
   document.getElementById("dateAdded").value = new Date().toISOString().slice(0, 10);
 }
 
-function saveData() {
-  localStorage.setItem("peakflow_crm_customers", JSON.stringify(data));
+function saveCustomers() {
+  localStorage.setItem("peakflow_crm_customers", JSON.stringify(customers));
+}
+
+function saveQuotes() {
+  localStorage.setItem("peakflow_crm_quotes", JSON.stringify(quotes));
 }
 
 function addCustomer() {
@@ -171,13 +232,13 @@ function addCustomer() {
     return;
   }
 
-  data.unshift(customer);
-  saveData();
-  clearForm();
-  render();
+  customers.unshift(customer);
+  saveCustomers();
+  clearCustomerForm();
+  renderCustomers();
 }
 
-function clearForm() {
+function clearCustomerForm() {
   document.getElementById("fullName").value = "";
   document.getElementById("phone").value = "";
   document.getElementById("email").value = "";
@@ -190,34 +251,73 @@ function clearForm() {
   document.getElementById("notes").value = "";
 }
 
+function addQuote() {
+  let quote = {
+    id: Date.now(),
+    customerName: document.getElementById("quoteCustomer").value.trim(),
+    service: document.getElementById("quoteService").value.trim(),
+    address: document.getElementById("quoteAddress").value.trim(),
+    price: document.getElementById("quotePrice").value.trim(),
+    status: document.getElementById("quoteStatus").value,
+    notes: document.getElementById("quoteNotes").value.trim(),
+    dateCreated: new Date().toISOString().slice(0, 10)
+  };
+
+  if (!quote.customerName) {
+    alert("Enter customer name");
+    return;
+  }
+
+  quotes.unshift(quote);
+  saveQuotes();
+  clearQuoteForm();
+  renderQuotes();
+}
+
+function clearQuoteForm() {
+  document.getElementById("quoteCustomer").value = "";
+  document.getElementById("quoteService").value = "";
+  document.getElementById("quoteAddress").value = "";
+  document.getElementById("quotePrice").value = "";
+  document.getElementById("quoteStatus").value = "Draft";
+  document.getElementById("quoteNotes").value = "";
+}
+
 function deleteCustomer(id) {
   if (!confirm("Delete this customer?")) return;
-  data = data.filter(c => c.id !== id);
-  saveData();
-  render();
+  customers = customers.filter(c => c.id !== id);
+  saveCustomers();
+  renderCustomers();
+}
+
+function deleteQuote(id) {
+  if (!confirm("Delete this quote?")) return;
+  quotes = quotes.filter(q => q.id !== id);
+  saveQuotes();
+  renderQuotes();
 }
 
 function advanceStatus(id) {
   const order = ["New Lead", "Quoted", "Scheduled", "Completed", "Paid"];
-  data = data.map(c => {
+  customers = customers.map(c => {
     if (c.id !== id) return c;
     const i = order.indexOf(c.status);
     c.status = order[Math.min(i + 1, order.length - 1)];
     return c;
   });
-  saveData();
-  render();
+  saveCustomers();
+  renderCustomers();
 }
 
 function statusBadge(status) {
   return '<span class="badge">' + status + '</span>';
 }
 
-function render() {
+function renderCustomers() {
   const search = document.getElementById("search").value.toLowerCase();
   const filterStatus = document.getElementById("filterStatus").value;
 
-  let filtered = data.filter(c => {
+  let filtered = customers.filter(c => {
     let haystack = [
       c.fullName,
       c.phone,
@@ -241,7 +341,7 @@ function render() {
   let html = "";
   filtered.forEach(c => {
     html += `
-      <div class="customer">
+      <div class="record">
         <div class="row">
           <div>
             <div><strong>${escapeHtml(c.fullName)}</strong></div>
@@ -268,7 +368,58 @@ function render() {
     html = "<div class='small'>No customers found.</div>";
   }
 
-  document.getElementById("list").innerHTML = html;
+  document.getElementById("customerList").innerHTML = html;
+}
+
+function renderQuotes() {
+  const search = document.getElementById("quoteSearch").value.toLowerCase();
+  const filterStatus = document.getElementById("quoteFilterStatus").value;
+
+  let filtered = quotes.filter(q => {
+    let haystack = [
+      q.customerName,
+      q.service,
+      q.address,
+      q.price,
+      q.status,
+      q.notes,
+      q.dateCreated
+    ].join(" ").toLowerCase();
+
+    let matchesSearch = haystack.includes(search);
+    let matchesStatus = filterStatus === "All" || q.status === filterStatus;
+    return matchesSearch && matchesStatus;
+  });
+
+  document.getElementById("quoteCount").textContent = filtered.length;
+
+  let html = "";
+  filtered.forEach(q => {
+    html += `
+      <div class="record">
+        <div class="row">
+          <div>
+            <div><strong>${escapeHtml(q.customerName)}</strong></div>
+            ${statusBadge(escapeHtml(q.status))}
+            <div class="small"><strong>Service:</strong> ${escapeHtml(q.service || "")}</div>
+            <div class="small"><strong>Address:</strong> ${escapeHtml(q.address || "")}</div>
+            <div class="small"><strong>Date Created:</strong> ${escapeHtml(q.dateCreated || "")}</div>
+            <div class="small"><strong>Notes:</strong> ${escapeHtml(q.notes || "")}</div>
+          </div>
+          <div class="money">$${escapeHtml(q.price || "0")}</div>
+        </div>
+        <div class="actions">
+          <button class="secondary" onclick="deleteQuote(${q.id})">Delete</button>
+        </div>
+      </div>
+    `;
+  });
+
+  if (!html) {
+    html = "<div class='small'>No quotes found.</div>";
+  }
+
+  document.getElementById("quoteList").innerHTML = html;
 }
 
 function escapeHtml(str) {
@@ -280,7 +431,8 @@ function escapeHtml(str) {
     .replaceAll("'", "&#039;");
 }
 
-render();
+renderCustomers();
+renderQuotes();
 </script>
 
 </body>
