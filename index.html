@@ -1,3 +1,4 @@
+
 HTML
 <!DOCTYPE html>
 <html>
@@ -9,7 +10,6 @@ body { font-family: Arial, sans-serif; margin:0; background:#f4f4f4; color:#111;
 .header { background:#111; color:#fff; padding:16px; }
 .container { padding:15px; max-width:1100px; margin:0 auto; }
 .card { background:#fff; padding:15px; margin-bottom:15px; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,.08); }
-.grid { display:grid; gap:10px; }
 @media (min-width: 800px) {
   .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:15px; }
 }
@@ -67,7 +67,7 @@ button.secondary {
 
 <div class="header">
   <h2 style="margin:0;">PeakFlow CRM</h2>
-  <div style="margin-top:4px;font-size:14px;">Customer records, quotes, jobs, and payments</div>
+  <div style="margin-top:4px;font-size:14px;">Customer records, quotes, and jobs</div>
 </div>
 
 <div class="container">
@@ -194,11 +194,66 @@ button.secondary {
     <div id="quoteList"></div>
   </div>
 
+  <div class="grid-2">
+    <div class="card">
+      <h3 class="section-title">Add Job</h3>
+
+      <label>Customer Name</label>
+      <input id="jobCustomer" placeholder="John Smith">
+
+      <label>Service</label>
+      <input id="jobService" placeholder="House Wash">
+
+      <label>Job Address</label>
+      <input id="jobAddress" placeholder="123 Main St, Monroe, GA">
+
+      <label>Scheduled Date</label>
+      <input id="jobDate" type="date">
+
+      <label>Job Status</label>
+      <select id="jobStatus">
+        <option>Scheduled</option>
+        <option>In Progress</option>
+        <option>Completed</option>
+        <option>Canceled</option>
+      </select>
+
+      <label>Job Notes</label>
+      <textarea id="jobNotes" placeholder="Gate code, water source, add-ons"></textarea>
+
+      <button onclick="addJob()">Save Job</button>
+    </div>
+
+    <div class="card">
+      <h3 class="section-title">Job Search</h3>
+      <input id="jobSearch" placeholder="Search jobs..." oninput="renderJobs()">
+
+      <label>Job Status Filter</label>
+      <select id="jobFilterStatus" onchange="renderJobs()">
+        <option value="All">All</option>
+        <option>Scheduled</option>
+        <option>In Progress</option>
+        <option>Completed</option>
+        <option>Canceled</option>
+      </select>
+
+      <div style="margin-top:14px;">
+        <strong>Total Jobs:</strong> <span id="jobCount">0</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 class="section-title">Jobs</h3>
+    <div id="jobList"></div>
+  </div>
+
 </div>
 
 <script>
 let customers = JSON.parse(localStorage.getItem("peakflow_crm_customers") || "[]");
 let quotes = JSON.parse(localStorage.getItem("peakflow_crm_quotes") || "[]");
+let jobs = JSON.parse(localStorage.getItem("peakflow_crm_jobs") || "[]");
 
 if (!document.getElementById("dateAdded").value) {
   document.getElementById("dateAdded").value = new Date().toISOString().slice(0, 10);
@@ -210,6 +265,10 @@ function saveCustomers() {
 
 function saveQuotes() {
   localStorage.setItem("peakflow_crm_quotes", JSON.stringify(quotes));
+}
+
+function saveJobs() {
+  localStorage.setItem("peakflow_crm_jobs", JSON.stringify(jobs));
 }
 
 function addCustomer() {
@@ -283,6 +342,37 @@ function clearQuoteForm() {
   document.getElementById("quoteNotes").value = "";
 }
 
+function addJob() {
+  let job = {
+    id: Date.now(),
+    customerName: document.getElementById("jobCustomer").value.trim(),
+    service: document.getElementById("jobService").value.trim(),
+    address: document.getElementById("jobAddress").value.trim(),
+    date: document.getElementById("jobDate").value,
+    status: document.getElementById("jobStatus").value,
+    notes: document.getElementById("jobNotes").value.trim()
+  };
+
+  if (!job.customerName) {
+    alert("Enter customer name");
+    return;
+  }
+
+  jobs.unshift(job);
+  saveJobs();
+  clearJobForm();
+  renderJobs();
+}
+
+function clearJobForm() {
+  document.getElementById("jobCustomer").value = "";
+  document.getElementById("jobService").value = "";
+  document.getElementById("jobAddress").value = "";
+  document.getElementById("jobDate").value = "";
+  document.getElementById("jobStatus").value = "Scheduled";
+  document.getElementById("jobNotes").value = "";
+}
+
 function deleteCustomer(id) {
   if (!confirm("Delete this customer?")) return;
   customers = customers.filter(c => c.id !== id);
@@ -295,6 +385,13 @@ function deleteQuote(id) {
   quotes = quotes.filter(q => q.id !== id);
   saveQuotes();
   renderQuotes();
+}
+
+function deleteJob(id) {
+  if (!confirm("Delete this job?")) return;
+  jobs = jobs.filter(j => j.id !== id);
+  saveJobs();
+  renderJobs();
 }
 
 function advanceStatus(id) {
@@ -422,6 +519,55 @@ function renderQuotes() {
   document.getElementById("quoteList").innerHTML = html;
 }
 
+function renderJobs() {
+  const search = document.getElementById("jobSearch").value.toLowerCase();
+  const filterStatus = document.getElementById("jobFilterStatus").value;
+
+  let filtered = jobs.filter(j => {
+    let haystack = [
+      j.customerName,
+      j.service,
+      j.address,
+      j.date,
+      j.status,
+      j.notes
+    ].join(" ").toLowerCase();
+
+    let matchesSearch = haystack.includes(search);
+    let matchesStatus = filterStatus === "All" || j.status === filterStatus;
+    return matchesSearch && matchesStatus;
+  });
+
+  document.getElementById("jobCount").textContent = filtered.length;
+
+  let html = "";
+  filtered.forEach(j => {
+    html += `
+      <div class="record">
+        <div class="row">
+          <div>
+            <div><strong>${escapeHtml(j.customerName)}</strong></div>
+            ${statusBadge(escapeHtml(j.status))}
+            <div class="small"><strong>Service:</strong> ${escapeHtml(j.service || "")}</div>
+            <div class="small"><strong>Address:</strong> ${escapeHtml(j.address || "")}</div>
+            <div class="small"><strong>Scheduled Date:</strong> ${escapeHtml(j.date || "")}</div>
+            <div class="small"><strong>Notes:</strong> ${escapeHtml(j.notes || "")}</div>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="secondary" onclick="deleteJob(${j.id})">Delete</button>
+        </div>
+      </div>
+    `;
+  });
+
+  if (!html) {
+    html = "<div class='small'>No jobs found.</div>";
+  }
+
+  document.getElementById("jobList").innerHTML = html;
+}
+
 function escapeHtml(str) {
   return String(str)
     .replaceAll("&", "&amp;")
@@ -433,6 +579,7 @@ function escapeHtml(str) {
 
 renderCustomers();
 renderQuotes();
+renderJobs();
 </script>
 
 </body>
