@@ -1,4 +1,3 @@
-
 HTML
 <!DOCTYPE html>
 <html>
@@ -85,6 +84,11 @@ button.secondary {
   object-fit:cover;
   border-radius:8px;
   border:1px solid #ccc;
+}
+.photo-group-title {
+  margin-top:10px;
+  font-weight:bold;
+  font-size:14px;
 }
 </style>
 </head>
@@ -256,8 +260,11 @@ button.secondary {
       <label>Job Notes</label>
       <textarea id="jobNotes" placeholder="Gate code, water source, add-ons"></textarea>
 
-      <label>Job Photos</label>
-      <input id="jobPhotos" type="file" accept="image/*" multiple>
+      <label>Before Photos</label>
+      <input id="jobBeforePhotos" type="file" accept="image/*" multiple>
+
+      <label>After Photos</label>
+      <input id="jobAfterPhotos" type="file" accept="image/*" multiple>
 
       <button onclick="addJob()">Save Job</button>
     </div>
@@ -492,14 +499,19 @@ function fileToBase64(file) {
   });
 }
 
-async function addJob() {
-  const files = document.getElementById("jobPhotos").files;
+async function filesToBase64List(fileInput) {
   let photoList = [];
-
+  const files = fileInput.files;
   for (let f of files) {
     let base64 = await fileToBase64(f);
     photoList.push(base64);
   }
+  return photoList;
+}
+
+async function addJob() {
+  const beforePhotos = await filesToBase64List(document.getElementById("jobBeforePhotos"));
+  const afterPhotos = await filesToBase64List(document.getElementById("jobAfterPhotos"));
 
   let job = {
     id: Date.now(),
@@ -509,7 +521,8 @@ async function addJob() {
     date: document.getElementById("jobDate").value,
     status: document.getElementById("jobStatus").value,
     notes: document.getElementById("jobNotes").value.trim(),
-    photos: photoList
+    beforePhotos: beforePhotos,
+    afterPhotos: afterPhotos
   };
 
   if (!job.customerName) {
@@ -530,7 +543,8 @@ function clearJobForm() {
   document.getElementById("jobDate").value = "";
   document.getElementById("jobStatus").value = "Scheduled";
   document.getElementById("jobNotes").value = "";
-  document.getElementById("jobPhotos").value = "";
+  document.getElementById("jobBeforePhotos").value = "";
+  document.getElementById("jobAfterPhotos").value = "";
 }
 
 function addPayment() {
@@ -607,9 +621,10 @@ function statusBadge(status) {
   return '<span class="badge">' + status + '</span>';
 }
 
-function renderJobPhotos(photos) {
+function renderPhotoSection(title, photos) {
   if (!photos || !photos.length) return "";
   return `
+    <div class="photo-group-title">${title}</div>
     <div class="job-photo-wrap">
       ${photos.map(photo => `<img class="job-photo" src="${photo}">`).join("")}
     </div>
@@ -758,7 +773,8 @@ function renderJobs() {
             <div class="small"><strong>Address:</strong> ${escapeHtml(j.address || "")}</div>
             <div class="small"><strong>Scheduled Date:</strong> ${escapeHtml(j.date || "")}</div>
             <div class="small"><strong>Notes:</strong> ${escapeHtml(j.notes || "")}</div>
-            ${renderJobPhotos(j.photos)}
+            ${renderPhotoSection("Before", j.beforePhotos)}
+            ${renderPhotoSection("After", j.afterPhotos)}
           </div>
         </div>
         <div class="actions">
