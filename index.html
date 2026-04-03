@@ -1,4 +1,287 @@
+HTML
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PeakFlow CRM</title>
+<style>
+body { font-family: Arial, sans-serif; margin:0; background:#f4f4f4; color:#111; }
+.header { background:#111; color:#fff; padding:16px; }
+.container { padding:15px; max-width:1100px; margin:0 auto; }
+.card { background:#fff; padding:15px; margin-bottom:15px; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,.08); }
+.grid { display:grid; gap:10px; }
+@media (min-width: 800px) {
+  .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:15px; }
+}
+input, select, textarea, button {
+  width:100%;
+  padding:12px;
+  margin-top:6px;
+  border-radius:10px;
+  border:1px solid #ccc;
+  box-sizing:border-box;
+  font-size:16px;
+}
+textarea { min-height:90px; resize:vertical; }
+button {
+  background:#111;
+  color:#fff;
+  border:none;
+  font-weight:bold;
+}
+button.secondary {
+  background:#fff;
+  color:#111;
+  border:1px solid #ccc;
+}
+.customer {
+  border:1px solid #ddd;
+  border-radius:10px;
+  padding:12px;
+  margin-top:10px;
+}
+.row {
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  align-items:flex-start;
+}
+.badge {
+  display:inline-block;
+  padding:4px 8px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:bold;
+  background:#eee;
+  margin-top:6px;
+}
+.small { color:#555; font-size:14px; margin-top:4px; }
+.money { font-size:20px; font-weight:bold; white-space:nowrap; }
+.actions { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+.actions button { width:auto; padding:10px 12px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h2 style="margin:0;">PeakFlow CRM</h2>
+  <div style="margin-top:4px;font-size:14px;">Customer records for quotes, jobs, and payments</div>
+</div>
+
+<div class="container">
+
+  <div class="grid-2">
+    <div class="card">
+      <h3>Add Customer</h3>
+
+      <label>Full Name</label>
+      <input id="fullName" placeholder="John Smith">
+
+      <label>Phone</label>
+      <input id="phone" placeholder="943-291-6430">
+
+      <label>Email</label>
+      <input id="email" placeholder="john@email.com">
+
+      <label>Service Address</label>
+      <input id="serviceAddress" placeholder="123 Main St, Monroe, GA">
+
+      <label>Billing Address</label>
+      <input id="billingAddress" placeholder="Same as service address">
+
+      <label>Service Needed</label>
+      <input id="serviceNeeded" placeholder="House Wash">
+
+      <label>Quote Amount</label>
+      <input id="quoteAmount" type="number" placeholder="325">
+
+      <label>Status</label>
+      <select id="status">
+        <option>New Lead</option>
+        <option>Quoted</option>
+        <option>Scheduled</option>
+        <option>Completed</option>
+        <option>Paid</option>
+      </select>
+
+      <label>Date Added</label>
+      <input id="dateAdded" type="date">
+
+      <label>Notes</label>
+      <textarea id="notes" placeholder="Customer wants driveway add-on"></textarea>
+
+      <button onclick="addCustomer()">Save Customer</button>
+    </div>
+
+    <div class="card">
+      <h3>Search</h3>
+      <input id="search" placeholder="Search name, phone, address, service..." oninput="render()">
+
+      <label>Status Filter</label>
+      <select id="filterStatus" onchange="render()">
+        <option value="All">All</option>
+        <option>New Lead</option>
+        <option>Quoted</option>
+        <option>Scheduled</option>
+        <option>Completed</option>
+        <option>Paid</option>
+      </select>
+
+      <div style="margin-top:14px;">
+        <strong>Total Customers:</strong> <span id="count">0</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Customers</h3>
+    <div id="list"></div>
+  </div>
+
+</div>
+
 <script>
-   document.write("PeakFlow CRM is loading...
-                  go back and tell me so I can give you the next step");
-      </script>
+let data = JSON.parse(localStorage.getItem("peakflow_crm_customers") || "[]");
+
+if (!document.getElementById("dateAdded").value) {
+  document.getElementById("dateAdded").value = new Date().toISOString().slice(0, 10);
+}
+
+function saveData() {
+  localStorage.setItem("peakflow_crm_customers", JSON.stringify(data));
+}
+
+function addCustomer() {
+  let customer = {
+    id: Date.now(),
+    fullName: document.getElementById("fullName").value.trim(),
+    phone: document.getElementById("phone").value.trim(),
+    email: document.getElementById("email").value.trim(),
+    serviceAddress: document.getElementById("serviceAddress").value.trim(),
+    billingAddress: document.getElementById("billingAddress").value.trim(),
+    serviceNeeded: document.getElementById("serviceNeeded").value.trim(),
+    quoteAmount: document.getElementById("quoteAmount").value.trim(),
+    status: document.getElementById("status").value,
+    dateAdded: document.getElementById("dateAdded").value,
+    notes: document.getElementById("notes").value.trim()
+  };
+
+  if (!customer.fullName) {
+    alert("Enter customer name");
+    return;
+  }
+
+  data.unshift(customer);
+  saveData();
+  clearForm();
+  render();
+}
+
+function clearForm() {
+  document.getElementById("fullName").value = "";
+  document.getElementById("phone").value = "";
+  document.getElementById("email").value = "";
+  document.getElementById("serviceAddress").value = "";
+  document.getElementById("billingAddress").value = "";
+  document.getElementById("serviceNeeded").value = "";
+  document.getElementById("quoteAmount").value = "";
+  document.getElementById("status").value = "New Lead";
+  document.getElementById("dateAdded").value = new Date().toISOString().slice(0, 10);
+  document.getElementById("notes").value = "";
+}
+
+function deleteCustomer(id) {
+  if (!confirm("Delete this customer?")) return;
+  data = data.filter(c => c.id !== id);
+  saveData();
+  render();
+}
+
+function advanceStatus(id) {
+  const order = ["New Lead", "Quoted", "Scheduled", "Completed", "Paid"];
+  data = data.map(c => {
+    if (c.id !== id) return c;
+    const i = order.indexOf(c.status);
+    c.status = order[Math.min(i + 1, order.length - 1)];
+    return c;
+  });
+  saveData();
+  render();
+}
+
+function statusBadge(status) {
+  return '<span class="badge">' + status + '</span>';
+}
+
+function render() {
+  const search = document.getElementById("search").value.toLowerCase();
+  const filterStatus = document.getElementById("filterStatus").value;
+
+  let filtered = data.filter(c => {
+    let haystack = [
+      c.fullName,
+      c.phone,
+      c.email,
+      c.serviceAddress,
+      c.billingAddress,
+      c.serviceNeeded,
+      c.quoteAmount,
+      c.status,
+      c.notes,
+      c.dateAdded
+    ].join(" ").toLowerCase();
+
+    let matchesSearch = haystack.includes(search);
+    let matchesStatus = filterStatus === "All" || c.status === filterStatus;
+    return matchesSearch && matchesStatus;
+  });
+
+  document.getElementById("count").textContent = filtered.length;
+
+  let html = "";
+  filtered.forEach(c => {
+    html += `
+      <div class="customer">
+        <div class="row">
+          <div>
+            <div><strong>${escapeHtml(c.fullName)}</strong></div>
+            ${statusBadge(escapeHtml(c.status))}
+            <div class="small">${escapeHtml(c.phone || "")}</div>
+            <div class="small">${escapeHtml(c.email || "")}</div>
+            <div class="small"><strong>Service Address:</strong> ${escapeHtml(c.serviceAddress || "")}</div>
+            <div class="small"><strong>Billing Address:</strong> ${escapeHtml(c.billingAddress || "")}</div>
+            <div class="small"><strong>Service Needed:</strong> ${escapeHtml(c.serviceNeeded || "")}</div>
+            <div class="small"><strong>Date Added:</strong> ${escapeHtml(c.dateAdded || "")}</div>
+            <div class="small"><strong>Notes:</strong> ${escapeHtml(c.notes || "")}</div>
+          </div>
+          <div class="money">$${escapeHtml(c.quoteAmount || "0")}</div>
+        </div>
+        <div class="actions">
+          <button onclick="advanceStatus(${c.id})">Advance Status</button>
+          <button class="secondary" onclick="deleteCustomer(${c.id})">Delete</button>
+        </div>
+      </div>
+    `;
+  });
+
+  if (!html) {
+    html = "<div class='small'>No customers found.</div>";
+  }
+
+  document.getElementById("list").innerHTML = html;
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+render();
+</script>
+
+</body>
+</html>
