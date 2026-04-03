@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PeakFlow Business App</title>
+  <meta name="theme-color" content="#111111">
+  <style>
+    *{box-sizing:border-box} body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#f3f4f6;color:#18181b}
+    .wrap{max-width:1100px;margin:0 auto;padding:16px}
+    .hero{background:#111;color:#fff;border-radius:24px;padding:20px}
+    .hero h1{margin:10px 0 6px;font-size:32px}
+    .muted{color:#a1a1aa}
+    .grid{display:grid;gap:16px}
+    .cards{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+    .card{background:#fff;border-radius:20px;padding:16px;box-shadow:0 4px 14px rgba(0,0,0,.06)}
+    .big{font-size:28px;font-weight:700;margin-top:6px}
+    .tabs{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}
+    .tab{padding:10px 14px;border:none;border-radius:999px;background:#e5e7eb;font-weight:700}
+    .tab.active{background:#111;color:#fff}
+    input,textarea,select{width:100%;padding:12px;border:1px solid #d4d4d8;border-radius:14px;font:inherit}
+    textarea{min-height:100px}
+    .btn{padding:11px 14px;border:none;border-radius:14px;background:#111;color:#fff;font-weight:700}
+    .list{display:grid;gap:12px}
+    .item{border:1px solid #e4e4e7;border-radius:18px;padding:14px}
+    .topline{display:flex;justify-content:space-between;gap:10px;align-items:start}
+    .badge{display:inline-block;background:#f4f4f5;border-radius:999px;padding:6px 10px;font-size:12px;font-weight:700}
+    .two{display:grid;gap:16px;grid-template-columns:1fr}
+    .money{font-size:24px;font-weight:700}
+    .small{font-size:14px;color:#52525b}
+    .hidden{display:none}
+    @media(min-width:900px){.two{grid-template-columns:1.2fr .9fr}}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <div class="muted">PeakFlow Exterior Cleaning of Georgia</div>
+    <h1>PeakFlow Business App</h1>
+    <div class="muted">Lead → Quote → Job → Payment</div>
+    <div class="grid cards" style="margin-top:16px">
+      <div class="card"><div class="small">Leads</div><div class="big" id="leadCount">3</div></div>
+      <div class="card"><div class="small">Quoted</div><div class="big" id="quotedCount">1</div></div>
+      <div class="card"><div class="small">Scheduled</div><div class="big" id="scheduledCount">1</div></div>
+      <div class="card"><div class="small">Pipeline</div><div class="big" id="pipelineValue">$1,765</div></div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('dashboard', this)">Dashboard</button>
+    <button class="tab" onclick="showTab('crm', this)">CRM</button>
+    <button class="tab" onclick="showTab('quotes', this)">Quotes</button>
+    <button class="tab" onclick="showTab('payments', this)">Payments</button>
+    <button class="tab" onclick="showTab('field', this)">Field</button>
+  </div>
+
+  <div id="dashboard" class="tabpage">
+    <div class="two">
+      <div class="card">
+        <h3>Today's Focus</h3>
+        <div class="list">
+          <div class="item">Follow up on quoted leads</div>
+          <div class="item">Confirm tomorrow's jobs</div>
+          <div class="item">Send invoices before leaving the driveway</div>
+          <div class="item">Capture before/after photos</div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Quick Actions</h3>
+        <div class="grid cards">
+          <button class="btn" onclick="showTabFromCode('crm')">New Lead</button>
+          <button class="btn" onclick="showTabFromCode('quotes')">New Quote</button>
+          <button class="btn" onclick="showTabFromCode('payments')">Take Payment</button>
+          <button class="btn" onclick="showTabFromCode('field')">Field Notes</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="crm" class="tabpage hidden">
+    <div class="two">
+      <div class="card">
+        <h3>Customers</h3>
+        <div id="customerList" class="list"></div>
+      </div>
+      <div class="card">
+        <h3>Add Lead</h3>
+        <div class="grid">
+          <input id="name" placeholder="Customer name">
+          <input id="phone" placeholder="Phone">
+          <input id="address" placeholder="Address">
+          <input id="service" placeholder="Service requested">
+          <input id="value" placeholder="Estimated value">
+          <textarea id="notes" placeholder="Notes"></textarea>
+          <button class="btn" onclick="addLead()">Add Lead</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="quotes" class="tabpage hidden">
+    <div class="two">
+      <div class="card">
+        <h3>Quote Builder</h3>
+        <div class="grid">
+          <input id="qCustomer" placeholder="Customer name">
+          <input id="qAddress" placeholder="Property address">
+          <select id="qService">
+            <option>House Wash</option>
+            <option>Driveway Cleaning</option>
+            <option>Roof Wash</option>
+            <option>Commercial Cleanup</option>
+          </select>
+          <input id="qPrice" placeholder="Price">
+          <button class="btn" onclick="saveQuote()">Save Quote</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Quote Preview</h3>
+        <div class="item">
+          <div><strong id="previewCustomer">Customer name</strong></div>
+          <div class="small" id="previewAddress">Property address</div>
+          <div style="margin-top:8px" id="previewService">Service</div>
+          <div class="money" style="margin-top:12px" id="previewPrice">$0</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="payments" class="tabpage hidden">
+    <div class="two">
+      <div class="card">
+        <h3>Invoices</h3>
+        <div id="invoiceList" class="list"></div>
+      </div>
+      <div class="card">
+        <h3>Real Version Later</h3>
+        <div class="list">
+          <div class="item">Connect Square payment links</div>
+          <div class="item">Save receipts under each customer</div>
+          <div class="item">Mark paid automatically</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="field" class="tabpage hidden">
+    <div class="two">
+      <div class="card">
+        <h3>Field Notes</h3>
+        <textarea id="fieldNote" placeholder="Write job notes here"></textarea>
+      </div>
+      <div class="card">
+        <h3>Photo Placeholder</h3>
+        <div class="item">This simple version is front-end only. Real photo upload can be added later.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const customers = [
+  {name:'Sarah Johnson', phone:'(555) 210-1144', address:'Monroe, GA', service:'House Wash', status:'Quoted', value:325, notes:'Requested driveway upsell.'},
+  {name:'Mike Turner', phone:'(555) 410-9902', address:'Loganville, GA', service:'Driveway + Walkway', status:'New Lead', value:240, notes:'Prefers Saturday morning.'},
+  {name:'Oak Ridge Realty', phone:'(555) 300-8811', address:'Athens, GA', service:'Commercial Cleanup', status:'Scheduled', value:1200, notes:'Needs COI before start.'}
+];
+const invoices = [
+  {id:'INV-1001', customer:'Sarah Johnson', amount:325, status:'Sent'},
+  {id:'INV-1002', customer:'Oak Ridge Realty', amount:1200, status:'Draft'}
+];
+
+function render() {
+  const customerList = document.getElementById('customerList');
+  customerList.innerHTML = '';
+  customers.forEach((c) => {
+    const div = document.createElement('div');
+    div.className = 'item';
+    div.innerHTML = `
+      <div class="topline">
+        <div>
+          <strong>${c.name}</strong> <span class="badge">${c.status}</span>
+          <div class="small">${c.service}</div>
+          <div class="small">${c.phone || ''}</div>
+          <div class="small">${c.address || ''}</div>
+          <div class="small">${c.notes || ''}</div>
+        </div>
+        <div class="money">$${Number(c.value||0).toLocaleString()}</div>
+      </div>
+    `;
+    customerList.appendChild(div);
+  });
+
+  const invoiceList = document.getElementById('invoiceList');
+  invoiceList.innerHTML = '';
+  invoices.forEach((inv) => {
+    const div = document.createElement('div');
+    div.className = 'item';
+    div.innerHTML = `
+      <div class="topline">
+        <div>
+          <strong>${inv.id}</strong> <span class="badge">${inv.status}</span>
+          <div class="small">${inv.customer}</div>
+        </div>
+        <div class="money">$${inv.amount.toLocaleString()}</div>
+      </div>
+    `;
+    invoiceList.appendChild(div);
+  });
+
+  document.getElementById('leadCount').textContent = customers.length;
+  document.getElementById('quotedCount').textContent = customers.filter(x => x.status === 'Quoted').length;
+  document.getElementById('scheduledCount').textContent = customers.filter(x => x.status === 'Scheduled').length;
+  document.getElementById('pipelineValue').textContent = '$' + customers.reduce((a,b)=>a+Number(b.value||0),0).toLocaleString();
+}
+
+function addLead() {
+  customers.unshift({
+    name: document.getElementById('name').value || 'New Customer',
+    phone: document.getElementById('phone').value,
+    address: document.getElementById('address').value,
+    service: document.getElementById('service').value,
+    status: 'New Lead',
+    value: Number(document.getElementById('value').value || 0),
+    notes: document.getElementById('notes').value
+  });
+  ['name','phone','address','service','value','notes'].forEach(id => document.getElementById(id).value = '');
+  render();
+  showTabFromCode('crm');
+}
+
+function saveQuote() {
+  const customer = document.getElementById('qCustomer').value || 'Customer name';
+  const address = document.getElementById('qAddress').value || 'Property address';
+  const service = document.getElementById('qService').value;
+  const price = document.getElementById('qPrice').value || '0';
+  document.getElementById('previewCustomer').textContent = customer;
+  document.getElementById('previewAddress').textContent = address;
+  document.getElementById('previewService').textContent = service;
+  document.getElementById('previewPrice').textContent = '$' + Number(price).toLocaleString();
+  invoices.unshift({id:'INV-' + (1000 + invoices.length + 1), customer, amount:Number(price), status:'Draft'});
+  render();
+  showTabFromCode('payments');
+}
+
+function showTab(id, btn) {
+  document.querySelectorAll('.tabpage').forEach(x => x.classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+  document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+}
+function showTabFromCode(id) {
+  document.querySelectorAll('.tabpage').forEach(x => x.classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+  const labels = ['dashboard','crm','quotes','payments','field'];
+  document.querySelectorAll('.tab').forEach((x,i) => x.classList.toggle('active', labels[i]===id));
+}
+render();
+</script>
+</body>
+</html>
