@@ -1,4 +1,5 @@
 
+
 HTML
 <!DOCTYPE html>
 <html>
@@ -61,13 +62,25 @@ button.secondary {
 .actions { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
 .actions button { width:auto; padding:10px 12px; }
 .section-title { margin-top:0; }
+.calc-box {
+  border:1px solid #ddd;
+  border-radius:10px;
+  padding:12px;
+  background:#fafafa;
+  margin-top:10px;
+}
+.calc-price {
+  font-size:28px;
+  font-weight:bold;
+  margin-top:10px;
+}
 </style>
 </head>
 <body>
 
 <div class="header">
   <h2 style="margin:0;">PeakFlow CRM</h2>
-  <div style="margin-top:4px;font-size:14px;">Customer records, quotes, jobs, and payments</div>
+  <div style="margin-top:4px;font-size:14px;">Customer records, quotes, jobs, payments, and quote calculator</div>
 </div>
 
 <div class="container">
@@ -142,32 +155,42 @@ button.secondary {
 
   <div class="grid-2">
     <div class="card">
-      <h3 class="section-title">Add Quote</h3>
+      <h3 class="section-title">Quote Calculator</h3>
 
       <label>Customer Name</label>
-      <input id="quoteCustomer" placeholder="John Smith">
+      <input id="calcCustomer" placeholder="John Smith">
 
-      <label>Service</label>
-      <input id="quoteService" placeholder="House Wash">
-
-      <label>Property Address</label>
-      <input id="quoteAddress" placeholder="123 Main St, Monroe, GA">
-
-      <label>Quote Price</label>
-      <input id="quotePrice" type="number" placeholder="325">
-
-      <label>Quote Status</label>
-      <select id="quoteStatus">
-        <option>Draft</option>
-        <option>Sent</option>
-        <option>Approved</option>
-        <option>Rejected</option>
+      <label>Service Type</label>
+      <select id="calcService" onchange="calculateQuote()">
+        <option>House Wash</option>
+        <option>Driveway Cleaning</option>
+        <option>Roof Wash</option>
+        <option>Gutter Brightening</option>
+        <option>Commercial Cleanup</option>
       </select>
 
-      <label>Quote Notes</label>
-      <textarea id="quoteNotes" placeholder="Includes driveway add-on"></textarea>
+      <label>Square Footage / Area</label>
+      <input id="calcSize" type="number" placeholder="2200" oninput="calculateQuote()">
 
-      <button onclick="addQuote()">Save Quote</button>
+      <label>Condition</label>
+      <select id="calcCondition" onchange="calculateQuote()">
+        <option>Light</option>
+        <option selected>Standard</option>
+        <option>Heavy</option>
+      </select>
+
+      <label>Add-ons</label>
+      <input id="calcAddons" placeholder="Driveway, walkway, porch" oninput="calculateQuote()">
+
+      <label>Manual Override (optional)</label>
+      <input id="calcManual" type="number" placeholder="Leave blank to auto-calculate" oninput="calculateQuote()">
+
+      <div class="calc-box">
+        <div class="small">Suggested Quote</div>
+        <div class="calc-price" id="calcResult">$0</div>
+      </div>
+
+      <button onclick="saveCalculatedQuote()">Save Calculated Quote</button>
     </div>
 
     <div class="card">
@@ -380,36 +403,70 @@ function clearCustomerForm() {
   document.getElementById("notes").value = "";
 }
 
-function addQuote() {
-  let quote = {
-    id: Date.now(),
-    customerName: document.getElementById("quoteCustomer").value.trim(),
-    service: document.getElementById("quoteService").value.trim(),
-    address: document.getElementById("quoteAddress").value.trim(),
-    price: document.getElementById("quotePrice").value.trim(),
-    status: document.getElementById("quoteStatus").value,
-    notes: document.getElementById("quoteNotes").value.trim(),
-    dateCreated: new Date().toISOString().slice(0, 10)
-  };
+function calculateQuote() {
+  const service = document.getElementById("calcService").value;
+  const size = Number(document.getElementById("calcSize").value || 0);
+  const condition = document.getElementById("calcCondition").value;
+  const addons = document.getElementById("calcAddons").value.trim();
+  const manual = document.getElementById("calcManual").value.trim();
 
-  if (!quote.customerName) {
+  if (manual) {
+    document.getElementById("calcResult").textContent = "$" + Number(manual).toLocaleString();
+    return Number(manual);
+  }
+
+  let price = 0;
+
+  if (service === "House Wash") {
+    price = 250 + (size * 0.06);
+  } else if (service === "Driveway Cleaning") {
+    price = 100 + (size * 0.08);
+  } else if (service === "Roof Wash") {
+    price = 400 + (size * 0.10);
+  } else if (service === "Gutter Brightening") {
+    price = 125 + (size * 0.03);
+  } else if (service === "Commercial Cleanup") {
+    price = 500 + (size * 0.12);
+  }
+
+  if (condition === "Light") price -= 25;
+  if (condition === "Heavy") price += 100;
+  if (addons) price += 75;
+
+  price = Math.max(price, 50);
+  price = Math.round(price);
+
+  document.getElementById("calcResult").textContent = "$" + price.toLocaleString();
+  return price;
+}
+
+function saveCalculatedQuote() {
+  const customerName = document.getElementById("calcCustomer").value.trim();
+  const service = document.getElementById("calcService").value;
+  const size = document.getElementById("calcSize").value.trim();
+  const condition = document.getElementById("calcCondition").value;
+  const addons = document.getElementById("calcAddons").value.trim();
+  const price = calculateQuote();
+
+  if (!customerName) {
     alert("Enter customer name");
     return;
   }
 
+  let quote = {
+    id: Date.now(),
+    customerName: customerName,
+    service: service,
+    address: "",
+    price: price,
+    status: "Draft",
+    notes: "Calculated quote | Size: " + size + " | Condition: " + condition + " | Add-ons: " + addons,
+    dateCreated: new Date().toISOString().slice(0, 10)
+  };
+
   quotes.unshift(quote);
   saveQuotes();
-  clearQuoteForm();
   renderQuotes();
-}
-
-function clearQuoteForm() {
-  document.getElementById("quoteCustomer").value = "";
-  document.getElementById("quoteService").value = "";
-  document.getElementById("quoteAddress").value = "";
-  document.getElementById("quotePrice").value = "";
-  document.getElementById("quoteStatus").value = "Draft";
-  document.getElementById("quoteNotes").value = "";
 }
 
 function addJob() {
@@ -735,6 +792,7 @@ function escapeHtml(str) {
     .replaceAll("'", "&#039;");
 }
 
+calculateQuote();
 renderCustomers();
 renderQuotes();
 renderJobs();
