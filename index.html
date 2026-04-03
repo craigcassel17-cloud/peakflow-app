@@ -1,3 +1,4 @@
+
 HTML
 <!DOCTYPE html>
 <html>
@@ -34,11 +35,17 @@ button.secondary {
   color:#111;
   border:1px solid #ccc;
 }
+button.light {
+  background:#f3f4f6;
+  color:#111;
+  border:1px solid #ccc;
+}
 .record {
   border:1px solid #ddd;
   border-radius:10px;
   padding:12px;
   margin-top:10px;
+  background:#fff;
 }
 .row {
   display:flex;
@@ -72,11 +79,28 @@ button.secondary {
   font-weight:bold;
   margin-top:10px;
 }
+.job-card {
+  border:1px solid #d1d5db;
+  border-radius:12px;
+  padding:14px;
+  margin-top:12px;
+  background:#fff;
+}
+.job-header {
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+}
+.job-title {
+  font-size:18px;
+  font-weight:bold;
+}
 .job-photo-wrap {
   display:flex;
   gap:8px;
   flex-wrap:wrap;
-  margin-top:10px;
+  margin-top:8px;
 }
 .job-photo {
   width:80px;
@@ -90,13 +114,21 @@ button.secondary {
   font-weight:bold;
   font-size:14px;
 }
+.notice {
+  margin-top:10px;
+  padding:10px;
+  border-radius:10px;
+  background:#ecfeff;
+  border:1px solid #a5f3fc;
+  color:#155e75;
+}
 </style>
 </head>
 <body>
 
 <div class="header">
   <h2 style="margin:0;">PeakFlow CRM</h2>
-  <div style="margin-top:4px;font-size:14px;">Customer records, quotes, jobs, payments, and quote calculator</div>
+  <div style="margin-top:4px;font-size:14px;">Pro job cards: quote → job → complete → payment</div>
 </div>
 
 <div class="container">
@@ -161,6 +193,7 @@ button.secondary {
       <div style="margin-top:14px;">
         <strong>Total Customers:</strong> <span id="count">0</span>
       </div>
+      <div class="notice">Tip: once a quote is converted to a job, the customer is marked Scheduled automatically.</div>
     </div>
   </div>
 
@@ -285,11 +318,12 @@ button.secondary {
       <div style="margin-top:14px;">
         <strong>Total Jobs:</strong> <span id="jobCount">0</span>
       </div>
+      <div class="notice">Each job card now has actions to complete the job and create a payment.</div>
     </div>
   </div>
 
   <div class="card">
-    <h3 class="section-title">Jobs</h3>
+    <h3 class="section-title">Job Cards</h3>
     <div id="jobList"></div>
   </div>
 
@@ -386,6 +420,10 @@ function savePayments() {
   localStorage.setItem("peakflow_crm_payments", JSON.stringify(payments));
 }
 
+function scrollToPayments() {
+  document.getElementById("paymentCustomer").scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
 function addCustomer() {
   let customer = {
     id: Date.now(),
@@ -439,17 +477,11 @@ function calculateQuote() {
 
   let price = 0;
 
-  if (service === "House Wash") {
-    price = 250 + (size * 0.06);
-  } else if (service === "Driveway Cleaning") {
-    price = 100 + (size * 0.08);
-  } else if (service === "Roof Wash") {
-    price = 400 + (size * 0.10);
-  } else if (service === "Gutter Brightening") {
-    price = 125 + (size * 0.03);
-  } else if (service === "Commercial Cleanup") {
-    price = 500 + (size * 0.12);
-  }
+  if (service === "House Wash") price = 250 + (size * 0.06);
+  else if (service === "Driveway Cleaning") price = 100 + (size * 0.08);
+  else if (service === "Roof Wash") price = 400 + (size * 0.10);
+  else if (service === "Gutter Brightening") price = 125 + (size * 0.03);
+  else if (service === "Commercial Cleanup") price = 500 + (size * 0.12);
 
   if (condition === "Light") price -= 25;
   if (condition === "Heavy") price += 100;
@@ -487,8 +519,17 @@ function saveCalculatedQuote() {
   };
 
   quotes.unshift(quote);
+
+  let customer = customers.find(c => c.fullName.toLowerCase() === customerName.toLowerCase());
+  if (customer) {
+    customer.status = "Quoted";
+    customer.quoteAmount = price;
+    saveCustomers();
+  }
+
   saveQuotes();
   renderQuotes();
+  renderCustomers();
 }
 
 function fileToBase64(file) {
@@ -522,7 +563,9 @@ async function addJob() {
     status: document.getElementById("jobStatus").value,
     notes: document.getElementById("jobNotes").value.trim(),
     beforePhotos: beforePhotos,
-    afterPhotos: afterPhotos
+    afterPhotos: afterPhotos,
+    linkedQuoteId: null,
+    linkedPaymentId: null
   };
 
   if (!job.customerName) {
@@ -531,9 +574,17 @@ async function addJob() {
   }
 
   jobs.unshift(job);
+
+  let customer = customers.find(c => c.fullName.toLowerCase() === job.customerName.toLowerCase());
+  if (customer) {
+    customer.status = "Scheduled";
+    saveCustomers();
+  }
+
   saveJobs();
   clearJobForm();
   renderJobs();
+  renderCustomers();
 }
 
 function clearJobForm() {
@@ -565,9 +616,17 @@ function addPayment() {
   }
 
   payments.unshift(payment);
+
+  let customer = customers.find(c => c.fullName.toLowerCase() === payment.customerName.toLowerCase());
+  if (customer && payment.status === "Paid") {
+    customer.status = "Paid";
+    saveCustomers();
+  }
+
   savePayments();
   clearPaymentForm();
   renderPayments();
+  renderCustomers();
 }
 
 function clearPaymentForm() {
@@ -578,6 +637,85 @@ function clearPaymentForm() {
   document.getElementById("paymentDate").value = new Date().toISOString().slice(0, 10);
   document.getElementById("paymentStatus").value = "Pending";
   document.getElementById("paymentNotes").value = "";
+}
+
+function convertQuoteToJob(id) {
+  const quote = quotes.find(q => q.id === id);
+  if (!quote) return;
+
+  let job = {
+    id: Date.now(),
+    customerName: quote.customerName,
+    service: quote.service,
+    address: quote.address || "",
+    date: "",
+    status: "Scheduled",
+    notes: "Created from quote",
+    beforePhotos: [],
+    afterPhotos: [],
+    linkedQuoteId: quote.id,
+    linkedPaymentId: null
+  };
+
+  jobs.unshift(job);
+  quote.status = "Approved";
+
+  let customer = customers.find(c => c.fullName.toLowerCase() === quote.customerName.toLowerCase());
+  if (customer) {
+    customer.status = "Scheduled";
+    if (!customer.quoteAmount) customer.quoteAmount = quote.price;
+    saveCustomers();
+  }
+
+  saveQuotes();
+  saveJobs();
+  renderQuotes();
+  renderJobs();
+  renderCustomers();
+}
+
+function completeJob(id) {
+  const job = jobs.find(j => j.id === id);
+  if (!job) return;
+
+  job.status = "Completed";
+  saveJobs();
+
+  let customer = customers.find(c => c.fullName.toLowerCase() === job.customerName.toLowerCase());
+  if (customer) {
+    customer.status = "Completed";
+    saveCustomers();
+  }
+
+  document.getElementById("paymentCustomer").value = job.customerName;
+  document.getElementById("paymentService").value = job.service;
+  document.getElementById("paymentAmount").value = findCustomerAmount(job.customerName);
+  document.getElementById("paymentStatus").value = "Pending";
+  document.getElementById("paymentNotes").value = "Auto-filled from completed job";
+  scrollToPayments();
+
+  renderJobs();
+  renderCustomers();
+}
+
+function createPaymentFromJob(id) {
+  const job = jobs.find(j => j.id === id);
+  if (!job) return;
+
+  document.getElementById("paymentCustomer").value = job.customerName;
+  document.getElementById("paymentService").value = job.service;
+  document.getElementById("paymentAmount").value = findCustomerAmount(job.customerName);
+  document.getElementById("paymentStatus").value = "Pending";
+  document.getElementById("paymentNotes").value = "Created from job card";
+  scrollToPayments();
+}
+
+function findCustomerAmount(name) {
+  let customer = customers.find(c => c.fullName.toLowerCase() === name.toLowerCase());
+  if (customer && customer.quoteAmount) return customer.quoteAmount;
+  let quote = quotes.find(q => q.customerName.toLowerCase() === name.toLowerCase());
+  if (quote && quote.price) return quote.price;
+  return "";
 }
 
 function deleteCustomer(id) {
@@ -682,10 +820,7 @@ function renderCustomers() {
     `;
   });
 
-  if (!html) {
-    html = "<div class='small'>No customers found.</div>";
-  }
-
+  if (!html) html = "<div class='small'>No customers found.</div>";
   document.getElementById("customerList").innerHTML = html;
 }
 
@@ -727,16 +862,14 @@ function renderQuotes() {
           <div class="money">$${escapeHtml(q.price || "0")}</div>
         </div>
         <div class="actions">
+          <button onclick="convertQuoteToJob(${q.id})">Convert to Job</button>
           <button class="secondary" onclick="deleteQuote(${q.id})">Delete</button>
         </div>
       </div>
     `;
   });
 
-  if (!html) {
-    html = "<div class='small'>No quotes found.</div>";
-  }
-
+  if (!html) html = "<div class='small'>No quotes found.</div>";
   document.getElementById("quoteList").innerHTML = html;
 }
 
@@ -764,10 +897,10 @@ function renderJobs() {
   let html = "";
   filtered.forEach(j => {
     html += `
-      <div class="record">
-        <div class="row">
+      <div class="job-card">
+        <div class="job-header">
           <div>
-            <div><strong>${escapeHtml(j.customerName)}</strong></div>
+            <div class="job-title">${escapeHtml(j.customerName)}</div>
             ${statusBadge(escapeHtml(j.status))}
             <div class="small"><strong>Service:</strong> ${escapeHtml(j.service || "")}</div>
             <div class="small"><strong>Address:</strong> ${escapeHtml(j.address || "")}</div>
@@ -778,16 +911,15 @@ function renderJobs() {
           </div>
         </div>
         <div class="actions">
-          <button class="secondary" onclick="deleteJob(${j.id})">Delete</button>
+          <button onclick="completeJob(${j.id})">Mark Complete</button>
+          <button class="secondary" onclick="createPaymentFromJob(${j.id})">Create Payment</button>
+          <button class="light" onclick="deleteJob(${j.id})">Delete</button>
         </div>
       </div>
     `;
   });
 
-  if (!html) {
-    html = "<div class='small'>No jobs found.</div>";
-  }
-
+  if (!html) html = "<div class='small'>No jobs found.</div>";
   document.getElementById("jobList").innerHTML = html;
 }
 
@@ -835,10 +967,7 @@ function renderPayments() {
     `;
   });
 
-  if (!html) {
-    html = "<div class='small'>No payments found.</div>";
-  }
-
+  if (!html) html = "<div class='small'>No payments found.</div>";
   document.getElementById("paymentList").innerHTML = html;
 }
 
