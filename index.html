@@ -1,5 +1,4 @@
 
-
 HTML
 <!DOCTYPE html>
 <html>
@@ -73,6 +72,19 @@ button.secondary {
   font-size:28px;
   font-weight:bold;
   margin-top:10px;
+}
+.job-photo-wrap {
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-top:10px;
+}
+.job-photo {
+  width:80px;
+  height:80px;
+  object-fit:cover;
+  border-radius:8px;
+  border:1px solid #ccc;
 }
 </style>
 </head>
@@ -243,6 +255,9 @@ button.secondary {
 
       <label>Job Notes</label>
       <textarea id="jobNotes" placeholder="Gate code, water source, add-ons"></textarea>
+
+      <label>Job Photos</label>
+      <input id="jobPhotos" type="file" accept="image/*" multiple>
 
       <button onclick="addJob()">Save Job</button>
     </div>
@@ -469,7 +484,23 @@ function saveCalculatedQuote() {
   renderQuotes();
 }
 
-function addJob() {
+function fileToBase64(file) {
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = e => resolve(e.target.result);
+    reader.readAsDataURL(file);
+  });
+}
+
+async function addJob() {
+  const files = document.getElementById("jobPhotos").files;
+  let photoList = [];
+
+  for (let f of files) {
+    let base64 = await fileToBase64(f);
+    photoList.push(base64);
+  }
+
   let job = {
     id: Date.now(),
     customerName: document.getElementById("jobCustomer").value.trim(),
@@ -477,7 +508,8 @@ function addJob() {
     address: document.getElementById("jobAddress").value.trim(),
     date: document.getElementById("jobDate").value,
     status: document.getElementById("jobStatus").value,
-    notes: document.getElementById("jobNotes").value.trim()
+    notes: document.getElementById("jobNotes").value.trim(),
+    photos: photoList
   };
 
   if (!job.customerName) {
@@ -498,6 +530,7 @@ function clearJobForm() {
   document.getElementById("jobDate").value = "";
   document.getElementById("jobStatus").value = "Scheduled";
   document.getElementById("jobNotes").value = "";
+  document.getElementById("jobPhotos").value = "";
 }
 
 function addPayment() {
@@ -572,6 +605,15 @@ function advanceStatus(id) {
 
 function statusBadge(status) {
   return '<span class="badge">' + status + '</span>';
+}
+
+function renderJobPhotos(photos) {
+  if (!photos || !photos.length) return "";
+  return `
+    <div class="job-photo-wrap">
+      ${photos.map(photo => `<img class="job-photo" src="${photo}">`).join("")}
+    </div>
+  `;
 }
 
 function renderCustomers() {
@@ -716,6 +758,7 @@ function renderJobs() {
             <div class="small"><strong>Address:</strong> ${escapeHtml(j.address || "")}</div>
             <div class="small"><strong>Scheduled Date:</strong> ${escapeHtml(j.date || "")}</div>
             <div class="small"><strong>Notes:</strong> ${escapeHtml(j.notes || "")}</div>
+            ${renderJobPhotos(j.photos)}
           </div>
         </div>
         <div class="actions">
